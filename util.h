@@ -1,4 +1,4 @@
-
+// EDO ftiaxno typedef gia PTCB
 #ifndef UTIL_H
 #define UTIL_H
 

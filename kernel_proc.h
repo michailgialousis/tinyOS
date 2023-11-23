@@ -86,7 +86,7 @@ typedef struct process_thread_control_block{
   int refcount;
 
   rlnode ptcb_list_node;
-}
+}PTCB;
 
 
 /**

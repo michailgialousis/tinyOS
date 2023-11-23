@@ -2,7 +2,7 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
-
+// edo fucntions 
 /** 
   @brief Create a new thread in the current process.
   */
