@@ -44,6 +44,10 @@ static inline void initialize_PCB(PCB* pcb)
   rlnode_init(& pcb->children_node, pcb);
   rlnode_init(& pcb->exited_node, pcb);
   pcb->child_exit = COND_INIT;
+
+  rlnode_init(& pcb->ptcb_list, NULL);
+  pcb->thread_count = 0;
+
 }
 
 
@@ -101,7 +105,6 @@ void release_PCB(PCB* pcb)
   process_count--;
 }
 
-
 /*
  *
  * Process creation
@@ -123,6 +126,8 @@ void start_main_thread()
   exitval = call(argl,args);
   Exit(exitval);
 }
+
+
 
 
 /*
@@ -178,7 +183,24 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     the initialization of the PCB.
    */
   if(call != NULL) {
-    newproc->main_thread = spawn_thread(newproc, start_main_thread);
+
+    // Initialize and return a new TCB with spawn
+    TCB* new_thread ;
+    new_thread= spawn_thread(newproc, start_main_thread);
+
+    CURPROC->thread_count++
+    rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
+
+    // Acquire a PTCB (allocate space, make connections with PCB and TCB)
+    PTCB* new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
+    assert(new_ptcb!=NULL);
+
+    // Initialize PTCB
+    initialize_PTCB(new_ptcb,new_thread); // i dont about the for-loop
+
+    new_thread->ptcb = new_ptcb;
+
+    newproc->main_thread = new_thread;
     wakeup(newproc->main_thread);
   }
 
@@ -301,11 +323,11 @@ void sys_Exit(int exitval)
 
     while(sys_WaitChild(NOPROC,NULL)!=NOPROC);
 
-  } else {
+ /* }else {
 
-    /* Reparent any children of the exiting process to the 
+  *  /* Reparent any children of the exiting process to the 
        initial task */
-    PCB* initpcb = get_pcb(1);
+  /*  PCB* initpcb = get_pcb(1);
     while(!is_rlist_empty(& curproc->children_list)) {
       rlnode* child = rlist_pop_front(& curproc->children_list);
       child->pcb->parent = initpcb;
@@ -314,13 +336,13 @@ void sys_Exit(int exitval)
 
     /* Add exited children to the initial task's exited list 
        and signal the initial task */
-    if(!is_rlist_empty(& curproc->exited_list)) {
+    /*if(!is_rlist_empty(& curproc->exited_list)) {
       rlist_append(& initpcb->exited_list, &curproc->exited_list);
       kernel_broadcast(& initpcb->child_exit);
     }
 
     /* Put me into my parent's exited list */
-    rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
+    /*rlist_push_front(& curproc->parent->exited_list, &curproc->exited_node);
     kernel_broadcast(& curproc->parent->child_exit);
 
   }
@@ -334,13 +356,13 @@ void sys_Exit(int exitval)
    */
 
   /* Release the args data */
-  if(curproc->args) {
+ /* if(curproc->args) {
     free(curproc->args);
     curproc->args = NULL;
   }
 
   /* Clean up FIDT */
-  for(int i=0;i<MAX_FILEID;i++) {
+  /*for(int i=0;i<MAX_FILEID;i++) {
     if(curproc->FIDT[i] != NULL) {
       FCB_decref(curproc->FIDT[i]);
       curproc->FIDT[i] = NULL;
@@ -348,13 +370,15 @@ void sys_Exit(int exitval)
   }
 
   /* Disconnect my main_thread */
-  curproc->main_thread = NULL;
+  //curproc->main_thread = NULL;
 
   /* Now, mark the process as exited. */
-  curproc->pstate = ZOMBIE;
+ // curproc->pstate = ZOMBIE;
 
   /* Bye-bye cruel world */
-  kernel_sleep(EXITED, SCHED_USER);
+  /*kernel_sleep(EXITED, SCHED_USER);
+*/
+  ThreadExit(exitval);
 }
 
 

@@ -26,7 +26,7 @@ CCB cctx[MAX_CORES];
 	The current core's CCB. This must only be used in a 
 	non-preemtpive context.
  */
-#define CURCORE (cctx[cpu_core_id])
+//#define CURCORE (cctx[cpu_core_id])
 
 /* 
 	The current thread. This is a pointer to the TCB of the thread 
@@ -34,7 +34,7 @@ CCB cctx[MAX_CORES];
 
 	This must only be used in non-preemptive context.
 */
-#define CURTHREAD (CURCORE.current_thread)
+//#define CURTHREAD (CURCORE.current_thread)
 
 
 /*
@@ -146,6 +146,8 @@ static void thread_start()
 	assert(0);
 }
 
+
+
 /*
   Initialize and return a new TCB
 */
@@ -157,6 +159,9 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 
 	/* Set the owner */
 	tcb->owner_pcb = pcb;
+
+	/* PTCB*/
+
 
 	/* Initialize the other attributes */
 	tcb->type = NORMAL_THREAD;
@@ -204,6 +209,8 @@ void release_TCB(TCB* tcb)
 	active_threads--;
 	Mutex_Unlock(&active_threads_spinlock);
 }
+
+
 
 /*
  *
@@ -400,6 +407,8 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 	if (preempt)
 		preempt_on;
 }
+
+
 
 /* This function is the entry point to the scheduler's context switching */
 

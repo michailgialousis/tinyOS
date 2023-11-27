@@ -20,10 +20,33 @@
   @{
 */
 
+/********************************************
+	
+	Core table and CCB-related declarations.
+
+ *********************************************/
+
+/* Core control blocks */
+//CCB cctx[MAX_CORES];
 
 
-// EDO grafoume ptcb 
+/* 
+	The current core's CCB. This must only be used in a 
+	non-preemtpive context.
+ */
+#define CURCORE (cctx[cpu_core_id])
 
+/* 
+	The current thread. This is a pointer to the TCB of the thread 
+	currently executing on this core.
+
+	This must only be used in non-preemptive context.
+*/
+#define CURTHREAD (CURCORE.current_thread)
+
+
+
+/****************************************************************************/ 
 
 
 #include "bios.h"
@@ -151,8 +174,8 @@ typedef struct process_thread_control_block{
 
   int exitval;
 
-  int exited; // Why not boolean?
-  int detached;
+  int exited ; // Why not boolean?
+  int detached ;
 
   CondVar exit_cv;
 
@@ -166,6 +189,8 @@ typedef struct process_thread_control_block{
   The default thread stack size in TinyOS is 128 kbytes.
  */
 #define THREAD_STACK_SIZE (128 * 1024)
+
+//void initialize_ptcb(PTCB* ptcb);
 
 /************************
  *
@@ -276,6 +301,7 @@ int wakeup(TCB* tcb);
 	@param timeout a timeout for the sleep, or 
    */
 void sleep_releasing(Thread_state newstate, Mutex* mx, enum SCHED_CAUSE cause, TimerDuration timeout);
+
 
 /**
   @brief Give up the CPU.
