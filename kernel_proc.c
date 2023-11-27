@@ -185,22 +185,36 @@ Pid_t sys_Exec(Task call, int argl, void* args)
   if(call != NULL) {
 
     // Initialize and return a new TCB with spawn
-    TCB* new_thread ;
-    new_thread= spawn_thread(newproc, start_main_thread);
-
-    CURPROC->thread_count++
-    rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
+    TCB* new_tcb;
+    new_tcb= spawn_thread(newproc, start_main_thread);
+    newproc->main_thread = new_tcb;
 
     // Acquire a PTCB (allocate space, make connections with PCB and TCB)
-    PTCB* new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
+  
+      PTCB* new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
     assert(new_ptcb!=NULL);
 
-    // Initialize PTCB
-    initialize_PTCB(new_ptcb,new_thread); // i dont about the for-loop
 
-    new_thread->ptcb = new_ptcb;
+   // Initialize PTCB
+    new_ptcb->tcb = new_tcb;
+    new_ptcb->task = call;
+    new_ptcb->argl = argl;
+    new_ptcb->args = args;
+    new_ptcb->exit_cv = COND_INIT;
+    new_ptcb->refcount=0;
 
-    newproc->main_thread = new_thread;
+ 
+  rlnode_init(&new_ptcb->ptcb_list_node,&new_ptcb);
+  
+
+    CURPROC->thread_count++;
+
+    //Connections betwenn PTCB,TCB,PCB
+    rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
+
+    new_tcb->ptcb = new_ptcb;
+
+    
     wakeup(newproc->main_thread);
   }
 
@@ -379,6 +393,7 @@ void sys_Exit(int exitval)
   /*kernel_sleep(EXITED, SCHED_USER);
 */
   ThreadExit(exitval);
+}
 }
 
 

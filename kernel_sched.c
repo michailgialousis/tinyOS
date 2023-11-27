@@ -211,6 +211,29 @@ void release_TCB(TCB* tcb)
 }
 
 
+void initialize_PTCB(PTCB* ptcb,TCB* tcb)
+{
+
+  ptcb->tcb = tcb;
+  
+  ptcb->task = CURPROC->main_task;  // it should do the pcb task's, right?
+
+  ptcb->argl = 0;
+  ptcb->args = NULL;
+
+ //for(int i=0;i<MAX_FILEID;i++)   /* I dont know how many ptcbs we can have*/
+   // ptcb->FIDT[i] = NULL;
+
+  ptcb->detached =0;
+  ptcb->exited = 0;
+  
+
+  rlnode_init(& ptcb->ptcb_list_node, ptcb);
+  ptcb->exit_cv = COND_INIT;
+
+  ptcb->refcount = 0;
+}
+
 
 /*
  *

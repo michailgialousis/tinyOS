@@ -4,7 +4,7 @@
 #include "kernel_proc.h"
 
 
-void start_main_thread_lookalike()
+void create_process_thread()
 {
   int exitval;
 
@@ -16,28 +16,7 @@ void start_main_thread_lookalike()
   ThreadExit(exitval);
 }
 
-void initialize_PTCB(PTCB* ptcb,TCB* tcb)
-{
 
-  ptcb->tcb = tcb;
-  
-  ptcb->task = CURPROC->main_task;  // it should do the pcb task's, right?
-
-  ptcb->argl = 0;
-  ptcb->args = NULL;
-
- //for(int i=0;i<MAX_FILEID;i++)   /* I dont know how many ptcbs we can have*/
-   // ptcb->FIDT[i] = NULL;
-
-  ptcb->detached =0;
-  ptcb->exited = 0;
-  
-
-  rlnode_init(& ptcb->ptcb_list_node, ptcb);
-  ptcb->exit_cv = COND_INIT;
-
-  ptcb->refcount = 0;
-}
 
 
 /** 
@@ -49,8 +28,8 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
   // Initialize and return a new TCB with spawn
   TCB* new_thread ;
-  new_thread= spawn_thread(cur_thread()->owner_pcb, start_main_thread_lookalike);
-  CURPROC->thread_count++
+  new_thread= spawn_thread(cur_thread()->owner_pcb, create_process_thread);
+  CURPROC->thread_count++;
   
   // Acquire a PTCB (allocate space, make connections with PCB and TCB)
   PTCB* new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
@@ -61,8 +40,9 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
 
   new_thread->ptcb = new_ptcb;
+   CURPROC->thread_count++;
 
-  
+
   // Wake up TCB
   wakeup(new_thread);
   assert(new_thread->state == READY);
@@ -97,23 +77,25 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
     return -1;
   }
   if(joining_ptcb->detached == 1){
-    return -1
+  return -1;
   }
   else
+  {
 
     joining_ptcb->refcount ++;
 
     // Then we sleep...Zzzz
-    kernel_wait(joining_ptcb->exit_cv,SCHED_USER);
+    kernel_wait(&(joining_ptcb->exit_cv),SCHED_USER);
 
-    // Check if is indeed exited
+    // Check if thread is indeed exited
     assert(joining_ptcb->exited == 0);
 
     joining_ptcb->refcount --;
 
     *exitval = joining_ptcb->exitval; // I may be doing it wrong maybe in need the address or smth
 
-	 return 0;
+   return -1;
+ }
 }
 
 /**
@@ -121,19 +103,21 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   */
 int sys_ThreadDetach(Tid_t tid)
 {
-  PTCB* cur_ptcb = (Tid_t) tid;
+ PTCB* cur_ptcb = (PTCB*) tid;
 
-  if(cur_ptcb->tcb == NULL){ 
-    return -1;
-  }
+ if(cur_ptcb->tcb == NULL){ 
+   return -1;
+  }  
   if(cur_ptcb->exited == 1){
     return -1;
   }
   else
+  {
 
-    cur_ptcb->detached = 1;
+   cur_ptcb->detached = 1;
 
-	 return 0;
+   return 0;
+ }
 }
 
 /**
@@ -196,9 +180,9 @@ if(curproc->thread_count == 1){
   curproc->pstate = ZOMBIE;
 }
 
-  curproc->thread_count--//KAlitera sthn arxi kato apo curproc
+  curproc->thread_count--;//KAlitera sthn arxi kato apo curproc
 
-  kernel_broadcast(CURPROC->ptcb->exit_cv);
+  kernel_broadcast(cur_thread()->ptcb->exit_cv);
 
   /* Bye-bye cruel world */
   kernel_sleep(EXITED, SCHED_USER);
