@@ -337,11 +337,11 @@ void sys_Exit(int exitval)
 
     while(sys_WaitChild(NOPROC,NULL)!=NOPROC);
 
- /* }else {
+  } /*else {
 
-  *  /* Reparent any children of the exiting process to the 
+    /* Reparent any children of the exiting process to the 
        initial task */
-  /*  PCB* initpcb = get_pcb(1);
+    /*PCB* initpcb = get_pcb(1);
     while(!is_rlist_empty(& curproc->children_list)) {
       rlnode* child = rlist_pop_front(& curproc->children_list);
       child->pcb->parent = initpcb;
@@ -370,30 +370,28 @@ void sys_Exit(int exitval)
    */
 
   /* Release the args data */
- /* if(curproc->args) {
+  /*if(curproc->args) {
     free(curproc->args);
     curproc->args = NULL;
   }
 
   /* Clean up FIDT */
-  /*for(int i=0;i<MAX_FILEID;i++) {
+ /*for(int i=0;i<MAX_FILEID;i++) {
     if(curproc->FIDT[i] != NULL) {
-      FCB_decref(curproc->FIDT[i]);
-      curproc->FIDT[i] = NULL;
+     FCB_decref(curproc->FIDT[i]);
+     curproc->FIDT[i] = NULL;
     }
   }
 
   /* Disconnect my main_thread */
-  //curproc->main_thread = NULL;
+ /*curproc->main_thread = NULL;
 
   /* Now, mark the process as exited. */
- // curproc->pstate = ZOMBIE;
+  /*curproc->pstate = ZOMBIE;
 
   /* Bye-bye cruel world */
-  /*kernel_sleep(EXITED, SCHED_USER);
-*/
-  ThreadExit(exitval);
-}
+ //kernel_sleep(EXITED, SCHED_USER);
+    sys_ThreadExit(exitval);
 }
 
 
