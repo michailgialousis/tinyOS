@@ -193,27 +193,23 @@ Pid_t sys_Exec(Task call, int argl, void* args)
      ptcb = (PTCB*)xmalloc(sizeof(PTCB));
      assert(ptcb!=NULL);
 
-    
+    new_tcb->ptcb=ptcb;
 
-  ptcb->tcb = new_tcb;
-  ptcb->task = call;
-  ptcb->argl = argl;
-  ptcb->args = args;
-  ptcb->exited = 0;
-  ptcb->detached = 0;
+     ptcb->tcb = new_tcb;
+     ptcb->task = call;
+     ptcb->argl = argl;
+     ptcb->args = args;
+     ptcb->exited = 0;
+     ptcb->detached = 0;
 
-  ptcb->exit_cv = COND_INIT;
-  ptcb->refcount=0;
+     ptcb->exit_cv = COND_INIT;
+     ptcb->refcount=0;
 
-  new_tcb->ptcb=ptcb;
+     rlnode_init(&ptcb->ptcb_list_node,ptcb);
+     rlist_push_back(&newproc->ptcb_list,&ptcb->ptcb_list_node);
 
- 
-  rlnode_init(&ptcb->ptcb_list_node,&ptcb);
-  rlist_push_back(&newproc->ptcb_list,&ptcb->ptcb_list_node);
+     newproc->thread_count++;
 
-  newproc->thread_count++;
-
- 
       wakeup(newproc->main_thread);  
 
   }

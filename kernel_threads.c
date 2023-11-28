@@ -24,13 +24,13 @@ void create_process_thread()
   */
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
-
+  PCB *curproc = CURPROC;
   TCB* new_tcb;
   PTCB* new_ptcb;
 
   /*Initialize a new TCB*/
 
-  new_tcb = spawn_thread(cur_thread()->owner_pcb, create_process_thread);
+  new_tcb = spawn_thread(curproc, create_process_thread);
 
   new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
   assert(new_ptcb!=NULL);
@@ -41,16 +41,18 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   new_ptcb->exited = 0;
   new_ptcb->detached = 0;
   new_tcb->ptcb= new_ptcb;
+  new_ptcb->tcb=new_tcb;
 
   rlnode_init(& new_ptcb->ptcb_list_node, new_ptcb);
+  rlist_push_back(& curproc->ptcb_list,& new_ptcb->ptcb_list_node);
   new_ptcb->exit_cv = COND_INIT;
 
   new_ptcb->refcount = 0;
 
 
-  CURPROC->thread_count++;
+  curproc->thread_count++;
 
-  rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
+  
   
   wakeup(new_tcb);
 
