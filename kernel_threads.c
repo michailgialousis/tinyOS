@@ -2,7 +2,8 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
-
+#include "kernel_cc.h"
+#include "kernel_streams.h"
 
 void create_process_thread()
 {
@@ -128,7 +129,7 @@ void sys_ThreadExit(int exitval)
 
   PCB *curproc = CURPROC;
 
-if(curproc->thread_count == 1){
+ if(curproc->thread_count == 1){
     /* Reparent any children of the exiting process to the 
        initial task */
     PCB* initpcb = get_pcb(1);
@@ -178,16 +179,16 @@ if(curproc->thread_count == 1){
 
   /* Now, mark the process as exited. */
   curproc->pstate = ZOMBIE;
-}
+ }
 
   curproc->thread_count--;//KAlitera sthn arxi kato apo curproc
 
-  kernel_broadcast(cur_thread()->ptcb->exit_cv);
+  kernel_broadcast(&(cur_thread()->ptcb->exit_cv));
 
   /* Bye-bye cruel world */
   kernel_sleep(EXITED, SCHED_USER);
 
-//kapou EDW prepei na kanoyme COND_BBRODADCASt
+   //kapou EDW prepei na kanoyme COND_BBRODADCASt
 
 }
 

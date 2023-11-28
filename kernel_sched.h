@@ -192,6 +192,8 @@ typedef struct process_thread_control_block{
 
 //void initialize_ptcb(PTCB* ptcb);
 
+void initialize_PTCB(PTCB* ptcb,TCB* tcb);
+
 /************************
  *
  *      Scheduler
