@@ -35,13 +35,17 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
   assert(new_ptcb!=NULL);
 
-  initialize_PTCB(new_ptcb,new_tcb);
   new_ptcb->task = task;
   new_ptcb->argl = argl;
   new_ptcb->args = args;
   new_ptcb->exited = 0;
   new_ptcb->detached = 0;
   new_tcb->ptcb= new_ptcb;
+
+  rlnode_init(& new_ptcb->ptcb_list_node, new_ptcb);
+  new_ptcb->exit_cv = COND_INIT;
+
+  new_ptcb->refcount = 0;
 
 
   CURPROC->thread_count++;
