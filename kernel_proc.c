@@ -184,38 +184,38 @@ Pid_t sys_Exec(Task call, int argl, void* args)
    */
   if(call != NULL) {
 
-    // Initialize and return a new TCB with spawn
     TCB* new_tcb;
-    new_tcb= spawn_thread(newproc, start_main_thread);
-    newproc->main_thread = new_tcb;
+     PTCB* ptcb;
 
-    // Acquire a PTCB (allocate space, make connections with PCB and TCB)
-  
-      PTCB* new_ptcb = (PTCB*)xmalloc(sizeof(PTCB));
-    assert(new_ptcb!=NULL);
+     new_tcb =spawn_thread(newproc,start_main_thread);
+     newproc->main_thread =new_tcb;
 
-
-   // Initialize PTCB
-    new_ptcb->tcb = new_tcb;
-    new_ptcb->task = call;
-    new_ptcb->argl = argl;
-    new_ptcb->args = args;
-    new_ptcb->exit_cv = COND_INIT;
-    new_ptcb->refcount=0;
-
- 
-  rlnode_init(&new_ptcb->ptcb_list_node,&new_ptcb);
-  
-
-    CURPROC->thread_count++;
-
-    //Connections betwenn PTCB,TCB,PCB
-    rlist_push_back(&CURPROC->ptcb_list,&new_ptcb->ptcb_list_node);
-
-    new_tcb->ptcb = new_ptcb;
+     ptcb = (PTCB*)xmalloc(sizeof(PTCB));
+     assert(ptcb!=NULL);
 
     
-    wakeup(newproc->main_thread);
+
+  ptcb->tcb = new_tcb;
+  ptcb->task = call;
+  ptcb->argl = argl;
+  ptcb->args = args;
+  ptcb->exited = 0;
+  ptcb->detached = 0;
+
+  ptcb->exit_cv = COND_INIT;
+  ptcb->refcount=0;
+
+  new_tcb->ptcb=ptcb;
+
+ 
+  rlnode_init(&ptcb->ptcb_list_node,&ptcb);
+  rlist_push_back(&newproc->ptcb_list,&ptcb->ptcb_list_node);
+
+  newproc->thread_count++;
+
+ 
+      wakeup(newproc->main_thread);  
+
   }
 
 
