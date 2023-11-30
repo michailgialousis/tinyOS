@@ -22,11 +22,11 @@
 CCB cctx[MAX_CORES];
 
 
-/* 
+/*
 	The current core's CCB. This must only be used in a 
 	non-preemtpive context.
  */
-//#define CURCORE (cctx[cpu_core_id])
+#define CURCORE (cctx[cpu_core_id])
 
 /* 
 	The current thread. This is a pointer to the TCB of the thread 
@@ -34,8 +34,13 @@ CCB cctx[MAX_CORES];
 
 	This must only be used in non-preemptive context.
 */
-//#define CURTHREAD (CURCORE.current_thread)
+#define CURTHREAD (CURCORE.current_thread)
 
+/*Number of the scheduler priority queues*/
+#define PRIORITY_QUEUES 3
+
+/*The max number of yield calls before boosting*/
+#define MAX_YIELD_CALLS 200
 
 /*
 	This can be used in the preemptive context to
@@ -146,11 +151,10 @@ static void thread_start()
 	assert(0);
 }
 
-
-
 /*
   Initialize and return a new TCB
 */
+
 
 TCB* spawn_thread(PCB* pcb, void (*func)())
 {
@@ -159,9 +163,6 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 
 	/* Set the owner */
 	tcb->owner_pcb = pcb;
-
-	/* PTCB*/
-
 
 	/* Initialize the other attributes */
 	tcb->type = NORMAL_THREAD;
@@ -175,6 +176,8 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->rts = QUANTUM;
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
+
+	tcb->priority=PRIORITY_QUEUES-1;
 
 	/* Compute the stack segment address and size */
 	void* sp = ((void*)tcb) + THREAD_TCB_SIZE;
@@ -211,7 +214,6 @@ void release_TCB(TCB* tcb)
 }
 
 
-
 /*
  *
  * Scheduler
@@ -232,7 +234,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED; /* The scheduler queue */
+rlnode SCHED[PRIORITY_QUEUES]; /* The scheduler queue */
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -275,7 +277,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 static void sched_queue_add(TCB* tcb)
 {
 	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+	rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -333,10 +335,26 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
+  rlnode* sel = NULL;
 
-	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
+  for (int i=PRIORITY_QUEUES-1; i >=0; i--) {
+  	if (!is_rlist_empty(&SCHED[i])) {
+	     sel = rlist_pop_front(&SCHED[i]);
+	     break;
+    }
+  }
+
+	/*Finding the next Scheduler queue*/
+
+  TCB* next_thread = NULL;
+
+  if (sel != NULL)
+     next_thread = sel->tcb;
+
+	/* Get the head of the SCHED list */
+	//rlnode* sel = rlist_pop_front(&SCHED[current->priority]);
+
+	//TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
 
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
@@ -345,7 +363,7 @@ static TCB* sched_queue_select(TCB* current)
 
 	return next_thread;
 }
-
+  
 /*
   Make the process ready.
  */
@@ -409,8 +427,27 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 }
 
 
+/*Yield call counter for priority boost*/
+
+static int yield_calls=0;
 
 /* This function is the entry point to the scheduler's context switching */
+
+void boost_priorities(){
+
+  rlnode* sel = NULL;
+
+  for (int i=PRIORITY_QUEUES-2; i >=0; i--) {
+  	if (!is_rlist_empty(&SCHED[i])) {
+	     sel = rlist_pop_front(&SCHED[i]);
+	      assert(sel!=NULL);
+	     	sel->tcb->priority++;
+	     	rlist_push_back(&SCHED[i+1],sel);
+	     //sched_queue_add(sel->tcb);
+    }
+  }
+}
+		
 
 void yield(enum SCHED_CAUSE cause)
 {
@@ -433,8 +470,44 @@ void yield(enum SCHED_CAUSE cause)
 	current->last_cause = current->curr_cause;
 	current->curr_cause = cause;
 
+	switch(cause){
+
+	case SCHED_QUANTUM:
+
+		if(current->priority > 0)
+			current->priority--;
+
+		break;
+
+	case SCHED_IO:
+
+		if(current->priority < PRIORITY_QUEUES-1)
+			current->priority++;
+
+		break;
+
+	case SCHED_MUTEX:
+
+		if (current->last_cause==SCHED_MUTEX && current->priority > 0)
+		//if (current->priority > 0)
+			 current->priority--;
+		
+		break;
+
+	default:
+		break;
+	}
+
+	yield_calls++;
+
+	if(yield_calls == MAX_YIELD_CALLS){
+		boost_priorities();
+		yield_calls = 0;
+	}
+
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
+
 
 	/* Get next */
 	TCB* next = sched_queue_select(current);
@@ -454,6 +527,7 @@ void yield(enum SCHED_CAUSE cause)
 	/* This is where we get after we are switched back on! A long time
 	   may have passed. Start a new timeslice...
 	  */
+	
 	gain(preempt);
 }
 
@@ -530,7 +604,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-	rlnode_init(&SCHED, NULL);
+	for(int i=0;i<PRIORITY_QUEUES;i++){
+	rlnode_init(&SCHED[i], NULL);
+}
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
 

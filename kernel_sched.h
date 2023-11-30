@@ -20,35 +20,6 @@
   @{
 */
 
-/********************************************
-	
-	Core table and CCB-related declarations.
-
- *********************************************/
-
-/* Core control blocks */
-//CCB cctx[MAX_CORES];
-
-
-/* 
-	The current core's CCB. This must only be used in a 
-	non-preemtpive context.
- */
-#define CURCORE (cctx[cpu_core_id])
-
-/* 
-	The current thread. This is a pointer to the TCB of the thread 
-	currently executing on this core.
-
-	This must only be used in non-preemptive context.
-*/
-#define CURTHREAD (CURCORE.current_thread)
-
-
-
-/****************************************************************************/ 
-
-
 #include "bios.h"
 #include "tinyos.h"
 #include "util.h"
@@ -130,7 +101,7 @@ typedef struct thread_control_block {
 
 	PCB* owner_pcb; /**< @brief This is null for a free TCB */
 
-	PTCB* ptcb ;
+	PTCB* ptcb;
 
 	cpu_context_t context; /**< @brief The thread context */
 	Thread_type type; /**< @brief The type of thread */
@@ -148,6 +119,8 @@ typedef struct thread_control_block {
 	enum SCHED_CAUSE curr_cause; /**< @brief The endcause for the current time-slice */
 	enum SCHED_CAUSE last_cause; /**< @brief The endcause for the last time-slice */
 
+	int priority;
+
 #ifndef NVALGRIND
 	unsigned valgrind_stack_id; /**< @brief Valgrind helper for stacks. 
 
@@ -161,28 +134,28 @@ typedef struct thread_control_block {
 
 } TCB;
 
-/*
-PTCB
-*/
-
+/** Proccess Thread Control Block */
 typedef struct process_thread_control_block{
   TCB* tcb;
 
-  Task task;   
+  Task task;
   int argl;
   void* args;
 
   int exitval;
 
-  int exited ; // Why not boolean?
-  int detached ;
+  int exited;
+  int detached;
 
   CondVar exit_cv;
 
   int refcount;
 
   rlnode ptcb_list_node;
-}PTCB;
+} PTCB;
+
+void initialize_PTCB(PTCB* ptcb, TCB* tcb);
+
 
 /** @brief Thread stack size.
 
@@ -190,7 +163,8 @@ typedef struct process_thread_control_block{
  */
 #define THREAD_STACK_SIZE (128 * 1024)
 
-//void initialize_ptcb(PTCB* ptcb);
+
+
 
 
 
@@ -242,6 +216,9 @@ TCB* cur_thread();
   @brief A timeout constant, denoting no timeout for sleep.
 */
 #define NO_TIMEOUT ((TimerDuration)-1)
+
+
+
 
 /**
 	@brief Create a new thread.
@@ -303,7 +280,6 @@ int wakeup(TCB* tcb);
 	@param timeout a timeout for the sleep, or 
    */
 void sleep_releasing(Thread_state newstate, Mutex* mx, enum SCHED_CAUSE cause, TimerDuration timeout);
-
 
 /**
   @brief Give up the CPU.
