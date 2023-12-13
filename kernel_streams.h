@@ -30,7 +30,7 @@
 	@{
 */
 
-
+#define PIPE_BUFFER_SIZE 4096
 
 /** @brief The file control block.
 
@@ -46,6 +46,19 @@ typedef struct file_control_block
   rlnode freelist_node;		/**< @brief Intrusive list node */
 } FCB;
 
+typedef struct pipe_control_block{
+
+	FCB *reader,*writer;
+
+	CondVar has_space; /* For blocking writer if no space is available */
+
+  CondVar has_data; /* For blocking reader until data are available */
+
+	int w_position, r_position; /* write, read position in buffer 
+	                               (it depends on your implementation of bounded buffer,
+	                               i.e. alternatively pointers can be used)*/
+	char BUFFER[PIPE_BUFFER_SIZE];   /* bounded (cyclic) byte buffer */
+} pipe_cb;
 
 
 /** 
