@@ -511,8 +511,8 @@ typedef struct pipe_s {
 } pipe_t;
 
 
-/**
-	@brief Construct and return a pipe.
+/*
+  @brief Construct and return a pipe.
 
 	A pipe is a one-directional buffer accessed via two file ids,
 	one for each end of the buffer. The size of the buffer is 
