@@ -38,6 +38,8 @@
 	system calls, and contains pointers to device-specific
 	functions.
  */
+
+
 typedef struct file_control_block
 {
   uint refcount;  			/**< @brief Reference counter. */
@@ -54,10 +56,15 @@ typedef struct pipe_control_block{
 
   CondVar has_data; /* For blocking reader until data are available */
 
-	int w_position, r_position; /* write, read position in buffer 
+  int w_pos, r_pos; /* write, read position in buffer 
 	                               (it depends on your implementation of bounded buffer,
 	                               i.e. alternatively pointers can be used)*/
+  int data_length;
+
 	char BUFFER[PIPE_BUFFER_SIZE];   /* bounded (cyclic) byte buffer */
+
+
+	
 } pipe_cb;
 
 
