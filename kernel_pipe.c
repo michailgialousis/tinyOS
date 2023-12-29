@@ -15,25 +15,32 @@ int pipe_read(void* input_pipe_cb, char *buf, unsigned int size)
 	*/
 	pipe_cb* pipe_cb = input_pipe_cb;
 
-	if((pipe_cb == NULL) || (pipe_cb->writer == NULL))
+	if((pipe_cb == NULL) || (pipe_cb->reader == NULL))
 	{
 		kernel_broadcast(&(pipe_cb->has_space));
 		return -1;
 	}
 
-	while(pipe_cb->data_length == 0)
+	while(pipe_cb->data_length == 0 && pipe_cb->writer!=NULL)
 	{
-		kernel_wait(&(pipe_cb->has_space), SCHED_PIPE);
+    kernel_broadcast(&(pipe_cb->has_space));
+		kernel_wait(&(pipe_cb->has_data), SCHED_PIPE);
 	}
 
 	int data_read = 0;
 
 	for(int i = 0 ; (i<size) && (i<=PIPE_BUFFER_SIZE);i++)
-	{
+	{ 
+		if(pipe_cb->reader==NULL) //reader end might close while we read
+			return data_read;
+
 		buf[i] = pipe_cb->buffer[pipe_cb->r_pos];	
 		pipe_cb->r_pos = (pipe_cb->r_pos + 1) % PIPE_BUFFER_SIZE;
 		pipe_cb->data_length--;
 		data_read++;
+
+		if(data_read==size && pipe_cb->writer==NULL)
+			return 0;
 	}
 
 
