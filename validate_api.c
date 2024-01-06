@@ -1541,6 +1541,7 @@ int data_consumer(int argl, void* args)
 {
 	assert(argl == sizeof(int));
 	int nbytes = *(int*)args;
+	printf("%d\n", nbytes);
 	Close(1);
 
 	char buffer[16384];
@@ -1550,7 +1551,7 @@ int data_consumer(int argl, void* args)
 	while(rc) {
 		rc = Read(0, buffer, 16384);
 		assert(rc>=0);
-		count += rc;
+		count += rc;	
 	}
 	ASSERT(count == nbytes);
 	return 0;

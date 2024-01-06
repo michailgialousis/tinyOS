@@ -3,7 +3,8 @@
 
 #include "tinyos.h"
 #include "kernel_dev.h"
-
+#include "kernel_streams.h"
+#include "kernel_cc.h"
 
 #define PIPE_BUFFER_SIZE 4096
 
