@@ -7,6 +7,9 @@
 #include "kernel_streams.h"
 #include "kernel_cc.h"
 #include "kernel_pipe.h"
+#include "util.h"
+
+
 
 enum socket_type {
 	SOCKET_LISTENER,
@@ -14,42 +17,43 @@ enum socket_type {
 	SOCKET_PEER
 };
 
-struct listener_socket {
+typedef struct listener_socket {
 
 	rlnode queue;
 	CondVar req_available;
-};
+}listener_socket;
 
-struct unbound_socket {
+typedef struct unbound_socket {
 
 	rlnode unbound_socket;
-};
+}unbound_socket;
 
-struct peer_socket {
+typedef struct peer_socket {
 
-	socket_cb* peer;
+	struct peer_socket* peer;
 	pipe_cb* write_pipe;
 	pipe_cb* read_pipe;
-}
+}peer_socket;
 
 
 typedef struct socket_control_block {
 
 	uint refcount;
 	FCB* fcb;
-	socket_type type;
+	enum socket_type type;
 	port_t port;
 
-	union {
-		listener_socket listener_s,
-		unbound_socket unbound_s,
-		peer_socket peer_s
+	union{
+		listener_socket listener_s;
+		unbound_socket unbound_s;
+		peer_socket peer_s;
 	};
 
 
 
 }socket_cb;
 
+socket_cb* PORT_MAP[MAX_PORT];
 
 struct connection_request {
 
@@ -58,7 +62,8 @@ struct connection_request {
 
 	CondVar connected_cv;
 	rlnode queue_node;
-}
+};
 
+Fid_t sys_Socket(port_t port);
 
 #endif
