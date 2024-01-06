@@ -27,9 +27,8 @@ int pipe_read(void* input_pipe_cb, char *buf, unsigned int size)
 			return data_read;
 
 		while((pipe_cb->data_length == 0) && pipe_cb->writer!=NULL){
-	
-    kernel_broadcast(&pipe_cb->has_space);
-		kernel_wait(&pipe_cb->has_data, SCHED_PIPE);
+     kernel_broadcast(&pipe_cb->has_space);
+		 kernel_wait(&pipe_cb->has_data, SCHED_PIPE);
 	}
 
     pipe_cb->data_length--;
