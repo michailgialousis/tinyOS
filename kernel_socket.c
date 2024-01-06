@@ -16,7 +16,13 @@ int socket_read (void* this, char *buf, unsigned int size){
  }
 
  int socket_close (void* this){
- 	return -1;
+
+ 	socket_cb* scb = (socket_cb*) this;
+ 	if(scb==NULL)
+		return -1;
+	free(scb);
+	return 0;
+ 	
  }
 
 static file_ops socket_fops = {
@@ -58,7 +64,25 @@ Fid_t sys_Socket(port_t port)
 
 int sys_Listen(Fid_t sock)
 {
-	return -1;
+	FCB* fcb = get_fcb(sock);
+
+	if (fcb==NULL )
+	    return -1;
+
+    socket_cb* scb = (socket_cb*) fcb->streamobj;
+
+    if(scb == NULL || scb->port == NOPORT || PORT_MAP[scb->port] != NULL || scb->type != SOCKET_UNBOUND)
+    	return -1;
+
+    scb->type = SOCKET_LISTENER;
+
+    rlnode_init(&scb->listener_s.queue, NULL);
+    scb->listener_s.req_available = COND_INIT;
+
+    PORT_MAP[scb->port]=scb;
+
+    return 0;
+
 }
 
 

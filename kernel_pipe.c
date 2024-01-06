@@ -210,6 +210,11 @@ int sys_Pipe(pipe_t* pipe)
 	new_pipe_cb->reader->streamfunc = &reader_fops;
 	new_pipe_cb->writer->streamfunc = &writer_fops;
 
+	new_pipe_cb->has_data = COND_INIT;
+	new_pipe_cb->has_space = COND_INIT;
+
+
+
 
 	return 0;
 }
