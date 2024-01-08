@@ -25,6 +25,17 @@ typedef struct pipe_control_block{
 	
 } pipe_cb;
 
+int sys_Pipe(pipe_t* pipe);
+
+int pipe_read(void* input_pipe_cb, char *buf, unsigned int size);
+int pipe_reader_write(void* pipe_cb, const char* buf, unsigned int size);
+int pipe_reader_close(void* input_pipe_cb);
+void* pipe_reader_open(uint minor);
+
+int  pipe_write(void* input_pipe_cb, const char* buf, unsigned int size);
+int  pipe_writer_read(void* pipe_cb, char* buf, unsigned int size);
+int pipe_writer_close(void* input_pipe_cb);
+void* pipe_writer_open(uint minor);
 
 
 #endif

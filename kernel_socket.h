@@ -30,7 +30,7 @@ typedef struct unbound_socket {
 
 typedef struct peer_socket {
 
-	struct peer_socket* peer;
+	struct socket_control_block* peer;
 	pipe_cb* write_pipe;
 	pipe_cb* read_pipe;
 }peer_socket;
@@ -55,15 +55,26 @@ typedef struct socket_control_block {
 
 socket_cb* PORT_MAP[MAX_PORT];
 
-struct connection_request {
+typedef struct connection_request {
 
 	int admitted; // flag to know if the request is accepted
 	socket_cb* peer;
 
 	CondVar connected_cv;
 	rlnode queue_node;
-};
+}connection_req;
+
 
 Fid_t sys_Socket(port_t port);
+
+void* socket_open (uint minor);
+int socket_read (void* this, char *buf, unsigned int size);
+int socket_write (void* this, const char* buf, unsigned int size);
+int socket_close (void* this);
+
+int sys_Listen(Fid_t sock);
+Fid_t sys_Accept(Fid_t lsock);
+int sys_Connect(Fid_t sock, port_t port, timeout_t timeout);
+int sys_ShutDown(Fid_t sock, shutdown_mode how);
 
 #endif
