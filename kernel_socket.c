@@ -8,19 +8,59 @@ void* socket_open (uint minor){
 }
 
 int socket_read (void* this, char *buf, unsigned int size){
-	return -1;
+
+	socket_cb* scb = (socket_cb*) this;
+
+	if(scb==NULL || scb->type != SOCKET_PEER || scb->peer_s.read_pipe == NULL)
+		return -1;
+
+	return pipe_read(scb->peer_s.read_pipe, buf, size);
 }
 
  int socket_write (void* this, const char* buf, unsigned int size){
- 	return -1;
+
+ 	socket_cb* scb = (socket_cb*) this;
+
+ 	if(scb==NULL || scb->type != SOCKET_PEER ||scb->peer_s.write_pipe == NULL)
+ 		return -1;
+
+ 	return pipe_write(scb->peer_s.write_pipe, buf, size);
  }
 
  int socket_close (void* this){
 
  	socket_cb* scb = (socket_cb*) this;
+
  	if(scb==NULL)
-		return -1;
-	free(scb);
+ 			return -1;
+
+ 		if(scb->type==SOCKET_LISTENER){
+
+ 			PORT_MAP[scb->port] = NULL;
+ 			kernel_broadcast(&scb->listener_s.req_available);
+ 		}
+
+ 		if(scb->type==SOCKET_PEER){
+
+ 			if(scb->peer_s.read_pipe!=NULL){
+
+ 				pipe_reader_close(scb->peer_s.read_pipe);
+ 				scb->peer_s.read_pipe = NULL;
+ 			}
+
+ 			if(scb->peer_s.write_pipe!=NULL){
+
+ 				pipe_writer_close(scb->peer_s.write_pipe);
+ 				scb->peer_s.write_pipe = NULL;
+ 			}
+
+ 			scb->fcb = NULL;
+
+ 			if(scb->refcount==0)
+ 				free(scb);
+
+ 		}
+
 	return 0;
  	
  }
@@ -37,7 +77,10 @@ Fid_t sys_Socket(port_t port)
 	Fid_t fid;
 	FCB* fcb;
 
-	if(port < NOPORT || port > MAX_PORT || FCB_reserve(1, &fid, &fcb)==0 )
+	if(port < NOPORT || port > MAX_PORT)
+		return NOFILE;
+
+	if ((FCB_reserve(1, &fid, &fcb) == 0))
 		return NOFILE;
 
 
@@ -101,20 +144,14 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	listener->refcount++;
 
-	while(is_rlist_empty(&listener->listener_s.queue) && listener->port != NOPORT)
+	while(is_rlist_empty(&listener->listener_s.queue) && PORT_MAP[listener->port] != NULL)
 		kernel_wait(&listener->listener_s.req_available,SCHED_PIPE);
 
-	if(listener==NULL || listener->port == NOPORT)
+	if(PORT_MAP[listener->port]==NULL)
 		return NOFILE;
 
-	connection_req* req =(connection_req*)rlist_pop_front(&listener->listener_s.queue);
-    req->admitted = 1;
-
-   /*Create client peer socket for efficiency*/
-
-    socket_cb* client_peer = req->peer;
-    client_peer->type=SOCKET_PEER;
-
+	connection_req* req =rlist_pop_front(&listener->listener_s.queue)->req;
+    
 
 	/*Create server peer socket*/
 
@@ -122,6 +159,13 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	if(server_peer_fid == NOFILE)
 		return NOFILE;
+
+	req->admitted = 1;
+
+   /*Create client peer socket for efficiency*/
+
+    socket_cb* client_peer = req->peer;
+    client_peer->type=SOCKET_PEER;
 
 	FCB* server_peer_fcb = get_fcb(server_peer_fid);
 

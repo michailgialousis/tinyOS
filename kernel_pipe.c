@@ -61,11 +61,13 @@ int pipe_reader_close(void* input_pipe_cb)
    	if(pipe_cb==NULL)
 		return -1;
 
-  pipe_cb->reader = NULL;
- 	kernel_broadcast(&pipe_cb->has_space);
+    pipe_cb->reader = NULL;
+ 	
 
-  if(pipe_cb->writer == NULL)
-  	free(pipe_cb);
+    if(pipe_cb->writer == NULL) // kanoume h oxi null ton writer an den einai?
+  	  free(pipe_cb);
+    else
+  	  kernel_broadcast(&pipe_cb->has_space);
 
   return 0;
 }
@@ -135,10 +137,11 @@ int pipe_writer_close(void* input_pipe_cb)
 
   pipe_cb->writer = NULL;
 
- 	kernel_broadcast(&pipe_cb->has_data);
 
   if(pipe_cb->reader == NULL)
   	free(pipe_cb);
+  else
+  	kernel_broadcast(&pipe_cb->has_data);
 
   return 0;
 }
