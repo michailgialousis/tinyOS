@@ -34,7 +34,7 @@ int pipe_read(void* input_pipe_cb, char *buf, unsigned int size)
     pipe_cb->data_length--;
 		data_read++;
 
-    if(pipe_cb->r_pos == pipe_cb->w_pos && pipe_cb->writer==NULL)
+    if(pipe_cb->r_pos == pipe_cb->w_pos && pipe_cb->writer==NULL) 
     	return i;
 
 		buf[i] = pipe_cb->buffer[pipe_cb->r_pos];	
@@ -64,7 +64,7 @@ int pipe_reader_close(void* input_pipe_cb)
     pipe_cb->reader = NULL;
  	
 
-    if(pipe_cb->writer == NULL) // kanoume h oxi null ton writer an den einai?
+    if(pipe_cb->writer == NULL)
   	  free(pipe_cb);
     else
   	  kernel_broadcast(&pipe_cb->has_space);

@@ -144,10 +144,12 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	listener->refcount++;
 
+	port_t lport = listener->port;
+
 	while(is_rlist_empty(&listener->listener_s.queue) && PORT_MAP[listener->port] != NULL)
 		kernel_wait(&listener->listener_s.req_available,SCHED_PIPE);
 
-	if(PORT_MAP[listener->port]==NULL)
+	if(PORT_MAP[lport]==NULL)
 		return NOFILE;
 
 	connection_req* req =rlist_pop_front(&listener->listener_s.queue)->req;
@@ -162,7 +164,7 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	req->admitted = 1;
 
-   /*Create client peer socket for efficiency*/
+   /* Create client peer socket for efficiency */
 
     socket_cb* client_peer = req->peer;
     client_peer->type=SOCKET_PEER;
@@ -182,33 +184,33 @@ Fid_t sys_Accept(Fid_t lsock)
 
 	/*Initialize pipes*/
 
-    pipe_cb* write_pipe = (pipe_cb*)xmalloc(sizeof(pipe_cb));
-    pipe_cb* read_pipe = (pipe_cb*)xmalloc(sizeof(pipe_cb));
+    pipe_cb* pipe1 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
+    pipe_cb* pipe2 = (pipe_cb*)xmalloc(sizeof(pipe_cb));
 
-    write_pipe->writer=server_peer_fcb;
-    write_pipe->reader=client_peer->fcb;
-    write_pipe->w_pos = 0;
-	write_pipe->r_pos = 0;
-	write_pipe->data_length = 0;
-	write_pipe->has_data = COND_INIT;
-	write_pipe->has_space = COND_INIT;
+    pipe1->writer=server_peer_fcb;
+    pipe1->reader=client_peer->fcb;
+    pipe1->w_pos = 0;
+	pipe1->r_pos = 0;
+	pipe1->data_length = 0;
+	pipe1->has_data = COND_INIT;
+	pipe1->has_space = COND_INIT;
 
 
-    read_pipe->reader=server_peer_fcb;
-    read_pipe->writer=client_peer->fcb;
-    read_pipe->w_pos = 0;
-	read_pipe->r_pos = 0;
-	read_pipe->data_length = 0;
-	read_pipe->has_data = COND_INIT;
-	read_pipe->has_space = COND_INIT;
+    pipe2->reader=server_peer_fcb;
+    pipe2->writer=client_peer->fcb;
+    pipe2->w_pos = 0;
+	pipe2->r_pos = 0;
+	pipe2->data_length = 0;
+	pipe2->has_data = COND_INIT;
+	pipe2->has_space = COND_INIT;
 
    /*Connect the pipes with the peer sockets*/
 
-	server_peer->peer_s.write_pipe = write_pipe;
-	server_peer->peer_s.read_pipe = read_pipe;
+	server_peer->peer_s.write_pipe = pipe1;
+	server_peer->peer_s.read_pipe = pipe2;
 
-	client_peer->peer_s.write_pipe = read_pipe;
-	client_peer->peer_s.read_pipe = write_pipe;
+	client_peer->peer_s.write_pipe = pipe2;
+	client_peer->peer_s.read_pipe = pipe1;
 
 	listener->refcount--;
 
@@ -246,7 +248,7 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 
 	/*Increase refcount*/
 
-	client_peer->refcount++;
+	client_peer->refcount++; // probably listener
 
 	/*Initialize the connection request*/
 
@@ -267,7 +269,7 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
 
 	int status = 1;
 
-	while(req->admitted==0 && status == 1 && listener != NULL){
+	while(req->admitted==0 && status == 1 && PORT_MAP[listener->port] != NULL){
 		status=kernel_timedwait(&req->connected_cv, SCHED_PIPE, timeout);
 	}
 

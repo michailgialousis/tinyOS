@@ -100,6 +100,18 @@ PCB* get_pcb(Pid_t pid);
 */
 Pid_t get_pid(PCB* pcb);
 
+
+typedef struct procinfo_control_block{
+
+  procinfo info;
+  PCB cursor;
+}procinfo_cb;
+
+void* procinfo_open (uint minor);
+int procinfo_read (void* this, char *buf, unsigned int size);
+int procinfo_write (void* this, const char* buf, unsigned int size);
+int procinfo_close (void* this);
+
 /** @} */
 
 #endif

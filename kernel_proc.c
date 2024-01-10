@@ -337,7 +337,34 @@ void sys_Exit(int exitval)
     sys_ThreadExit(exitval);
 }
 
+void* procinfo_open (uint minor){
+  return NULL;
+}
 
+int procinfo_read (void* this, char *buf, unsigned int size){
+
+  return 0;
+
+}
+
+int procinfo_write (void* this, const char* buf, unsigned int size){
+
+  return -1;
+
+}
+
+int procinfo_close (void* this){
+
+  return 0;
+
+}
+
+static file_ops prociinfo_fops = {
+  .Open = procinfo_open,
+  .Read = procinfo_read ,
+  .Write = procinfo_write,
+  .Close = procinfo_close
+}; 
 
 Fid_t sys_OpenInfo()
 {
